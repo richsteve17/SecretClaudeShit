@@ -5,13 +5,13 @@ A simulation-style 4v4 soccer game built with TypeScript, Three.js, and Cannon.j
 ## Features
 
 - **4v4 Soccer Gameplay**: Control your team of 4 players against an AI-controlled opponent
+- **Mobile-First Design**: Full touch controls with virtual joystick and buttons
+- **Cross-Platform**: Works on desktop (keyboard) and mobile (touch) seamlessly
 - **Realistic Physics**: Ball physics and player movement powered by Cannon.js
 - **3D Graphics**: Rendered with Three.js for smooth 3D visuals
-- **Player Control**:
-  - Move players with WASD keys
-  - Sprint with Shift
-  - Kick/Pass with Space
-  - Switch between players with E
+- **Intuitive Controls**:
+  - Desktop: WASD movement, Space to kick, Shift to sprint, E to switch
+  - Mobile: Virtual joystick + touch buttons with visual feedback
 - **AI Opponents**: Smart AI that chases the ball and tries to score
 - **Score Tracking**: Real-time score display
 - **Dynamic Camera**: Follows your controlled player
@@ -57,6 +57,7 @@ The built files will be in the `dist/` directory.
 
 ## Controls
 
+### Desktop (Keyboard)
 - **W** - Move forward
 - **A** - Move left
 - **S** - Move backward
@@ -64,6 +65,14 @@ The built files will be in the `dist/` directory.
 - **Space** - Kick/Pass the ball
 - **Shift** - Sprint
 - **E** - Switch to the nearest teammate
+
+### Mobile (Touch)
+- **Virtual Joystick** (bottom-left) - Move player in any direction
+- **Red Button** (bottom-right) - Kick/Pass the ball
+- **Blue Button** (middle-right) - Sprint while held
+- **Orange Button** (top-right) - Switch to nearest teammate
+
+The game automatically detects your device and shows the appropriate controls!
 
 ## Game Mechanics
 
