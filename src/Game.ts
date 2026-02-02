@@ -22,6 +22,7 @@ export class Game {
 
   private controlledPlayerIndex: number = 0;
   private clock: THREE.Clock;
+  private prevInput: { kick: boolean; switchPlayer: boolean } = { kick: false, switchPlayer: false };
 
   constructor() {
     this.clock = new THREE.Clock();
@@ -133,7 +134,7 @@ export class Game {
     const controlledPlayer = this.players[this.controlledPlayerIndex];
     const input = this.inputManager.getInput();
 
-    if (input.switchPlayer && !this.inputManager.wasKeyPressed('e')) {
+    if (input.switchPlayer && !this.prevInput.switchPlayer) {
       this.switchToNearestPlayer();
     }
 
@@ -146,9 +147,12 @@ export class Game {
       controlledPlayer.applyFriction();
     }
 
-    if (input.kick && !this.inputManager.wasKeyPressed(' ')) {
+    if (input.kick && !this.prevInput.kick) {
       controlledPlayer.kick(this.ball);
     }
+
+    this.prevInput.kick = input.kick;
+    this.prevInput.switchPlayer = input.switchPlayer;
   }
 
   private updateAI(deltaTime: number): void {

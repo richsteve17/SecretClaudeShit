@@ -1,3 +1,5 @@
+import { TouchController } from './TouchController';
+
 export interface InputState {
   horizontal: number;
   vertical: number;
@@ -9,8 +11,16 @@ export interface InputState {
 export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private prevKeys: { [key: string]: boolean } = {};
+  private touchController: TouchController | null = null;
+  private isMobile: boolean;
 
   constructor() {
+    this.isMobile = this.detectMobile();
+
+    if (this.isMobile) {
+      this.touchController = new TouchController();
+    }
+
     window.addEventListener('keydown', (e) => {
       this.keys[e.key.toLowerCase()] = true;
     });
@@ -20,7 +30,16 @@ export class InputManager {
     });
   }
 
+  private detectMobile(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768);
+  }
+
   public getInput(): InputState {
+    if (this.isMobile && this.touchController) {
+      return this.touchController.getInput();
+    }
+
     const input: InputState = {
       horizontal: 0,
       vertical: 0,
@@ -45,5 +64,9 @@ export class InputManager {
 
   public wasKeyPressed(key: string): boolean {
     return this.prevKeys[key.toLowerCase()] || false;
+  }
+
+  public getIsMobile(): boolean {
+    return this.isMobile;
   }
 }
