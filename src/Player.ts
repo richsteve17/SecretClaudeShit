@@ -55,9 +55,8 @@ export class Player {
   }
 
   public move(direction: CANNON.Vec3, speed: number): void {
-    const force = direction.scale(speed * 80);
-    this.body.velocity.x = force.x;
-    this.body.velocity.z = force.z;
+    this.body.velocity.x = direction.x * speed;
+    this.body.velocity.z = direction.z * speed;
 
     if (direction.length() > 0) {
       const angle = Math.atan2(direction.x, direction.z);
@@ -68,6 +67,27 @@ export class Player {
   public applyFriction(): void {
     this.body.velocity.x *= 0.8;
     this.body.velocity.z *= 0.8;
+  }
+
+  public constrainToBounds(): void {
+    const maxX = 48;
+    const maxZ = 28;
+
+    if (this.body.position.x > maxX) {
+      this.body.position.x = maxX;
+      this.body.velocity.x = 0;
+    } else if (this.body.position.x < -maxX) {
+      this.body.position.x = -maxX;
+      this.body.velocity.x = 0;
+    }
+
+    if (this.body.position.z > maxZ) {
+      this.body.position.z = maxZ;
+      this.body.velocity.z = 0;
+    } else if (this.body.position.z < -maxZ) {
+      this.body.position.z = -maxZ;
+      this.body.velocity.z = 0;
+    }
   }
 
   public kick(ball: Ball): void {

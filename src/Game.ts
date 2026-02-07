@@ -164,7 +164,10 @@ export class Game {
   }
 
   private updateEntities(): void {
-    this.players.forEach(player => player.update());
+    this.players.forEach(player => {
+      player.constrainToBounds();
+      player.update();
+    });
     this.ball.update();
   }
 
