@@ -1,15 +1,21 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { Ball } from './Ball';
+import { AudioManager } from './AudioManager';
+import { KickImpactEffect } from './KickImpactEffect';
+import { RunDustEffect } from './RunDustEffect';
 
 export class Player {
   public mesh: THREE.Group;
   public body: CANNON.Body;
   public team: number;
   public playerNumber: number;
+  public isChargingKick: boolean = false;
 
   private speed: number = 15;
-  private sprintSpeed: number = 25;
+  private kickImpactEffect: KickImpactEffect | null = null;
+  private runDustEffect: RunDustEffect | null = null;
+  private isSprinting: boolean = false;
 
   constructor(
     scene: THREE.Scene,
@@ -58,6 +64,9 @@ export class Player {
     this.body.velocity.x = direction.x * speed;
     this.body.velocity.z = direction.z * speed;
 
+    // Track if player is sprinting
+    this.isSprinting = speed > this.speed;
+
     if (direction.length() > 0) {
       const angle = Math.atan2(direction.x, direction.z);
       this.mesh.rotation.y = angle;
@@ -90,7 +99,7 @@ export class Player {
     }
   }
 
-  public kick(ball: Ball): void {
+  public kick(ball: Ball, sprintModifier: number = 1.0): void {
     const playerPos = this.getPosition();
     const ballPos = ball.getPosition();
     const distance = playerPos.distanceTo(ballPos);
@@ -102,18 +111,42 @@ export class Player {
         ballPos.z - playerPos.z
       ).normalize();
 
-      const kickPower = 25;
+      const kickPower = 25 * sprintModifier;
       ball.body.velocity.set(
         direction.x * kickPower,
         5,
         direction.z * kickPower
       );
+
+      // Play kick sound based on power
+      const audioManager = AudioManager.getInstance();
+      audioManager.playKickSound(kickPower, ballPos);
+
+      // Trigger kick impact effect
+      if (this.kickImpactEffect) {
+        this.kickImpactEffect.trigger(ballPos, direction);
+      }
     }
   }
 
-  public update(): void {
+  public update(deltaTime: number = 0): void {
     this.mesh.position.copy(this.body.position as any);
     this.mesh.quaternion.copy(this.body.quaternion as any);
+
+    // Update run dust effect
+    if (this.runDustEffect && deltaTime > 0) {
+      const velocity = new THREE.Vector3(
+        this.body.velocity.x,
+        this.body.velocity.y,
+        this.body.velocity.z
+      );
+      this.runDustEffect.update(
+        this.getPosition(),
+        velocity,
+        this.isSprinting,
+        deltaTime
+      );
+    }
   }
 
   public getPosition(): THREE.Vector3 {
@@ -127,5 +160,32 @@ export class Player {
   public setPosition(position: CANNON.Vec3): void {
     this.body.position.copy(position);
     this.mesh.position.set(position.x, position.y, position.z);
+  }
+
+  public setParticleEffects(
+    kickImpactEffect: KickImpactEffect,
+    runDustEffect: RunDustEffect
+  ): void {
+    this.kickImpactEffect = kickImpactEffect;
+    this.runDustEffect = runDustEffect;
+  }
+
+  public startChargingKick(): void {
+    this.isChargingKick = true;
+  }
+
+  public stopChargingKick(): void {
+    this.isChargingKick = false;
+  }
+
+  public getIsChargingKick(): boolean {
+    return this.isChargingKick;
+  }
+
+  public isNearBall(ball: Ball): boolean {
+    const playerPos = this.getPosition();
+    const ballPos = ball.getPosition();
+    const distance = playerPos.distanceTo(ballPos);
+    return distance < 3;
   }
 }

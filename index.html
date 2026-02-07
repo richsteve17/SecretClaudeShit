@@ -57,15 +57,185 @@
       margin: 5px 0;
     }
 
+    #audio-controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    #mute-button {
+      width: 50px;
+      height: 50px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    #mute-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+      border-color: rgba(255, 255, 255, 0.8);
+      transform: scale(1.05);
+    }
+
+    #mute-button:active {
+      transform: scale(0.95);
+    }
+
+    #mute-button.muted {
+      background: rgba(200, 50, 50, 0.7);
+      border-color: rgba(255, 100, 100, 0.8);
+    }
+
+    #audio-settings {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      min-width: 200px;
+      display: none;
+      z-index: 1000;
+    }
+
+    #audio-settings.visible {
+      display: block;
+    }
+
+    #audio-settings h4 {
+      color: white;
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .volume-control {
+      margin: 10px 0;
+    }
+
+    .volume-control label {
+      color: white;
+      font-size: 12px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .volume-control input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .volume-value {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .volume-control select {
+      width: 100%;
+      padding: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .volume-control select:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .volume-control select option {
+      background: #1a1a1a;
+      color: white;
+    }
+
+    #settings-button {
+      width: 50px;
+      height: 50px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+      margin-top: 10px;
+    }
+
+    #settings-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+      border-color: rgba(255, 255, 255, 0.8);
+      transform: scale(1.05);
+    }
+
+    #settings-button:active {
+      transform: scale(0.95);
+    }
+
     @media (max-width: 768px), (hover: none) {
       #controls {
         display: none;
+      }
+
+      #mute-button:hover,
+      #settings-button:hover {
+        transform: none;
       }
     }
   </style>
 </head>
 <body>
   <div id="hud">0 - 0</div>
+
+  <div id="audio-controls">
+    <div id="mute-button" title="Toggle Mute">🔊</div>
+    <div id="settings-button" title="Audio Settings">⚙️</div>
+  </div>
+
+  <div id="audio-settings">
+    <h4>Audio Settings</h4>
+    <div class="volume-control">
+      <label for="master-volume">Master Volume</label>
+      <input type="range" id="master-volume" min="0" max="100" value="70">
+      <div class="volume-value" id="master-value">70%</div>
+    </div>
+    <div class="volume-control">
+      <label for="sfx-volume">Sound Effects</label>
+      <input type="range" id="sfx-volume" min="0" max="100" value="80">
+      <div class="volume-value" id="sfx-value">80%</div>
+    </div>
+    <div class="volume-control">
+      <label for="music-volume">Music/Ambient</label>
+      <input type="range" id="music-volume" min="0" max="100" value="50">
+      <div class="volume-value" id="music-value">50%</div>
+    </div>
+    <div class="volume-control">
+      <label for="ai-difficulty">AI Difficulty</label>
+      <select id="ai-difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+  </div>
+
   <div id="controls">
     <h3>Controls</h3>
     <p><strong>WASD</strong> - Move player</p>

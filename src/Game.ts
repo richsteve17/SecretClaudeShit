@@ -6,6 +6,14 @@ import { Ball } from './Ball';
 import { InputManager } from './InputManager';
 import { AIController } from './AIController';
 import { GameState } from './GameState';
+import { ShootingSystem } from './ShootingSystem';
+import { PowerMeter } from './PowerMeter';
+import { AudioManager } from './AudioManager';
+import { ParticleSystem } from './ParticleSystem';
+import { KickImpactEffect } from './KickImpactEffect';
+import { BallTrailEffect } from './BallTrailEffect';
+import { GoalExplosion } from './GoalExplosion';
+import { RunDustEffect } from './RunDustEffect';
 
 export class Game {
   private scene: THREE.Scene;
@@ -13,12 +21,21 @@ export class Game {
   private renderer: THREE.WebGLRenderer;
   private world: CANNON.World;
 
-  private field: Field;
   private ball: Ball;
   private players: Player[] = [];
   private inputManager: InputManager;
   private aiController: AIController;
   private gameState: GameState;
+  private shootingSystem: ShootingSystem;
+  private powerMeter: PowerMeter;
+  private audioManager: AudioManager;
+
+  // Particle system and effects
+  private particleSystem: ParticleSystem;
+  private kickImpactEffect: KickImpactEffect;
+  private ballTrailEffect: BallTrailEffect;
+  private goalExplosion: GoalExplosion;
+  private runDustEffect: RunDustEffect;
 
   private controlledPlayerIndex: number = 0;
   private clock: THREE.Clock;
@@ -45,11 +62,11 @@ export class Game {
     this.world = new CANNON.World();
     this.world.gravity.set(0, -9.82, 0);
     this.world.broadphase = new CANNON.NaiveBroadphase();
-    this.world.solver.iterations = 10;
 
     this.setupLights();
 
-    this.field = new Field(this.scene, this.world);
+    // Field automatically adds itself to scene
+    new Field(this.scene, this.world);
     this.ball = new Ball(this.scene, this.world);
 
     this.createPlayers();
@@ -57,8 +74,37 @@ export class Game {
     this.inputManager = new InputManager();
     this.aiController = new AIController();
     this.gameState = new GameState();
+    this.shootingSystem = new ShootingSystem();
+    this.powerMeter = new PowerMeter();
+    this.powerMeter.addStyles();
+
+    // Initialize audio system
+    this.audioManager = AudioManager.getInstance();
+    this.audioManager.loadSettings();
+    this.initializeAudio();
+
+    // Initialize particle system and effects
+    this.scene.userData.camera = this.camera; // Store camera for billboard effect
+    this.particleSystem = new ParticleSystem(this.scene);
+    this.kickImpactEffect = new KickImpactEffect(this.particleSystem);
+    this.ballTrailEffect = new BallTrailEffect(this.particleSystem);
+    this.goalExplosion = new GoalExplosion(this.particleSystem);
+    this.runDustEffect = new RunDustEffect(this.particleSystem);
+
+    // Set effects on ball
+    this.ball.setBallTrailEffect(this.ballTrailEffect);
+
+    // Set effects on players
+    this.players.forEach(player => {
+      player.setParticleEffects(this.kickImpactEffect, this.runDustEffect);
+    });
 
     window.addEventListener('resize', () => this.onWindowResize());
+  }
+
+  private async initializeAudio(): Promise<void> {
+    await this.audioManager.initialize();
+    this.audioManager.setCamera(this.camera);
   }
 
   private setupLights(): void {
@@ -108,7 +154,10 @@ export class Game {
     });
   }
 
-  public start(): void {
+  public async start(): Promise<void> {
+    // Ensure audio is ready (handle mobile autoplay restrictions)
+    await this.audioManager.ensureAudioContext();
+    await this.audioManager.startAmbientSound();
     this.gameLoop();
   }
 
@@ -122,20 +171,23 @@ export class Game {
 
     this.handleInput(deltaTime);
     this.updateAI(deltaTime);
-    this.updateEntities();
+    this.updateEntities(deltaTime);
     this.updateCamera();
     this.checkGameEvents();
     this.updateHUD();
+    this.particleSystem.update(deltaTime);
 
     this.renderer.render(this.scene, this.camera);
   };
 
-  private handleInput(deltaTime: number): void {
+  private handleInput(_deltaTime: number): void {
     const controlledPlayer = this.players[this.controlledPlayerIndex];
     const input = this.inputManager.getInput();
 
     if (input.switchPlayer && !this.prevInput.switchPlayer) {
       this.switchToNearestPlayer();
+      // Play UI sound for player switch
+      this.audioManager.playSound('ui_switch', 0.6);
     }
 
     const moveDirection = new CANNON.Vec3(input.horizontal, 0, -input.vertical);
@@ -147,28 +199,77 @@ export class Game {
       controlledPlayer.applyFriction();
     }
 
-    if (input.kick && !this.prevInput.kick) {
-      controlledPlayer.kick(this.ball);
-    }
+    // Handle charging kick system
+    this.handleKickInput(input, controlledPlayer);
 
     this.prevInput.kick = input.kick;
     this.prevInput.switchPlayer = input.switchPlayer;
   }
 
+  private handleKickInput(input: any, controlledPlayer: Player): void {
+    // Kick button pressed (start charging)
+    if (input.kick && !this.prevInput.kick) {
+      // Check if player is near ball before starting charge
+      if (controlledPlayer.isNearBall(this.ball)) {
+        this.shootingSystem.startCharging();
+        controlledPlayer.startChargingKick();
+        this.powerMeter.show();
+      }
+    }
+
+    // Kick button held (update power meter)
+    if (input.kick && this.shootingSystem.getIsCharging()) {
+      const currentPower = this.shootingSystem.getCurrentPower();
+      this.powerMeter.setPower(currentPower);
+    }
+
+    // Kick button released (execute shot)
+    if (!input.kick && this.prevInput.kick) {
+      if (this.shootingSystem.getIsCharging()) {
+        const power = this.shootingSystem.stopCharging();
+        controlledPlayer.stopChargingKick();
+        this.powerMeter.hide();
+
+        // Execute shot with the shooting system
+        const joystickInput = {
+          x: input.horizontal,
+          z: input.vertical
+        };
+
+        const shotExecuted = this.shootingSystem.executeShotFromPlayer(
+          controlledPlayer,
+          this.ball,
+          power,
+          joystickInput
+        );
+
+        // If shot was executed successfully, play audio
+        if (shotExecuted) {
+          const kickPower = 20 + (power / 100) * 30; // Map power to kick strength
+          this.audioManager.playKickSound(kickPower, this.ball.getPosition());
+        }
+      }
+    }
+  }
+
   private updateAI(deltaTime: number): void {
     this.players.forEach((player, index) => {
       if (index !== this.controlledPlayerIndex) {
-        this.aiController.updatePlayer(player, this.ball, this.players, deltaTime);
+        this.aiController.updatePlayer(player, this.ball, this.players, deltaTime, this.gameState.score);
       }
     });
   }
 
-  private updateEntities(): void {
+  public setAIDifficulty(difficulty: 'easy' | 'medium' | 'hard'): void {
+    this.aiController.setDifficulty(difficulty);
+  }
+
+  private updateEntities(deltaTime: number): void {
     this.players.forEach(player => {
       player.constrainToBounds();
-      player.update();
+      player.update(deltaTime);
     });
-    this.ball.update();
+    this.ball.update(deltaTime);
   }
 
   private updateCamera(): void {
@@ -211,11 +312,22 @@ export class Game {
     const ballPos = this.ball.getPosition();
 
     if (Math.abs(ballPos.x) > 52 && Math.abs(ballPos.z) < 8) {
+      let teamColor: number;
+
       if (ballPos.x > 0) {
         this.gameState.addScore(1);
+        teamColor = 0x0044ff; // Team 1 blue
       } else {
         this.gameState.addScore(2);
+        teamColor = 0xff4400; // Team 2 orange
       }
+
+      // Play goal celebration sound
+      this.audioManager.playSound('goal', 1.0);
+
+      // Trigger goal explosion effect
+      this.goalExplosion.trigger(ballPos, teamColor);
+
       this.resetPositions();
     }
 
@@ -243,7 +355,7 @@ export class Game {
       new CANNON.Vec3(10, 0, 0)
     ];
 
-    this.players.forEach((player, i) => {
+    this.players.forEach((player, _i) => {
       if (player.team === 1) {
         player.setPosition(team1Positions[player.playerNumber]);
       } else {
