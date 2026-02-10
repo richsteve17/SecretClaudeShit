@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { AudioManager } from './AudioManager';
 
 export interface TouchInput {
   horizontal: number;
@@ -9,11 +9,11 @@ export interface TouchInput {
 }
 
 export class TouchController {
-  private joystickBase: HTMLElement;
-  private joystickStick: HTMLElement;
-  private kickButton: HTMLElement;
-  private sprintButton: HTMLElement;
-  private switchButton: HTMLElement;
+  private joystickBase!: HTMLElement;
+  private joystickStick!: HTMLElement;
+  private kickButton!: HTMLElement;
+  private sprintButton!: HTMLElement;
+  private switchButton!: HTMLElement;
 
   private joystickActive: boolean = false;
   private joystickCenter: { x: number; y: number } = { x: 0, y: 0 };
@@ -181,6 +181,10 @@ export class TouchController {
       this.kickPressed = true;
       this.kickButton.style.transform = 'scale(0.9)';
       this.kickButton.style.background = 'rgba(255, 100, 100, 0.9)';
+
+      // Play UI click sound
+      const audioManager = AudioManager.getInstance();
+      audioManager.playSound('ui_click', 0.4);
     });
 
     this.kickButton.addEventListener('touchend', (e) => {
@@ -212,6 +216,10 @@ export class TouchController {
       if (now - this.lastSwitchPress > 300) {
         this.switchPressed = true;
         this.lastSwitchPress = now;
+
+        // Play UI click sound
+        const audioManager = AudioManager.getInstance();
+        audioManager.playSound('ui_click', 0.4);
       }
       this.switchButton.style.transform = 'scale(0.9)';
       this.switchButton.style.background = 'rgba(255, 200, 100, 0.9)';
